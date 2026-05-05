@@ -15,3 +15,4 @@ D:\cSharp\CarbonImpact2\Persistence\obj\Debug\net10.0\Persistence.pdb
 D:\cSharp\CarbonImpact2\Persistence\obj\Debug\net10.0\ref\Persistence.dll
 D:\cSharp\CarbonImpact2\Persistence\bin\Debug\net10.0\Persistence.runtimeconfig.json
 D:\cSharp\CarbonImpact2\Persistence\obj\Debug\net10.0\Persistence.genruntimeconfig.cache
+D:\cSharp\CarbonImpact2\Persistence\obj\Debug\net10.0\Persistence.sourcelink.json

@@ -1,10 +1,10 @@
 namespace Domain.Entities;
 
-public class CarbonReport
+public class CarbonReport 
 {
          // Primärschlüssel für die Datenbank (Persistence Schicht nutzt diesen später)
         //public int Id { get; set; } public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Id {get; set;} =  Guid.NewGuid().ToString();
+        public Guid Id {get; set;} = Guid.NewGuid();
         // Basis-Informationen
         public string CompanyName { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
@@ -25,4 +25,8 @@ public class CarbonReport
 
         // Metadaten
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+                // Zusätzliches Feld für die Dokumentation:
+        // Wer hat den Bericht erstellt?
+        public string? CreatedBy { get; set; }
 }
