@@ -9,6 +9,7 @@ namespace Application.Core
     {
         public MappingProfiles()
         {
+          
             CreateMap<CarbonReport, CarbonReportDto >()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id.ToString()));
         }

@@ -1,6 +1,7 @@
 
 using Application.CarbonReports.Commands;
 using Application.CarbonReports.Queries;
+using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,9 +28,25 @@ namespace API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<CarbonReportDto>> GetDetails(Guid id)
         {
-            var carbonReport = mediator.Send(new GetCarbonReportDetails.Query {Id = id});
+            var carbonReport = await mediator.Send(new GetCarbonReportDetails.Query {Id = id});
             if(carbonReport == null ) throw new Exception("carbon report not found");
             return Ok(carbonReport);
         }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> Delete(Guid id)
+        {
+            await mediator.Send(new DeleteCarbonReport.Command{Id = id});
+            return NoContent();
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult> Edit(Guid id, [FromBody] EditCarbonReport.Command command)
+        {
+            command.CarbonReport.Id = id;
+            await mediator.Send(command);
+            return Ok();
+        }
+
     }
 }

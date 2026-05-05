@@ -16,14 +16,25 @@ namespace Application.CarbonReports.Commands
             public required CarbonReport CarbonReport {get; set;}
         }
 
-        public class Handler(AppDbContext context, IMapper mapper) : IRequestHandler<Command>
+        public class Handler(AppDbContext context /*IMapper mapper*/) : IRequestHandler<Command>
         {
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
-                var carbonReport = await context.CarbonReports.FindAsync([request.CarbonReport.Id], cancellationToken)
-                    ?? throw new Exception("Cannot find carbon report");
-                
-                mapper.Map(request.CarbonReport, carbonReport);
+                var carbonReport = await context.CarbonReports.FindAsync( new object[] {request.CarbonReport.Id}, cancellationToken);
+                   // ?? throw new Exception("Cannot find carbon report");
+
+                if(carbonReport != null)
+                {
+                    
+                carbonReport.CompanyName = request.CarbonReport.CompanyName;
+                carbonReport.DieselLiters = request.CarbonReport.DieselLiters;
+                carbonReport.ElectricityKWh = request.CarbonReport.ElectricityKWh;
+                carbonReport.NaturalGasKWh = request.CarbonReport.NaturalGasKWh;
+                carbonReport.StartDate = request.CarbonReport.StartDate;
+                carbonReport.EndDate = request.CarbonReport.EndDate;
+                }                
+
+              //  mapper.Map(request.CarbonReport, carbonReport);
                 await context.SaveChangesAsync(cancellationToken);
                 
             }
