@@ -23,5 +23,13 @@ namespace API.Controllers
             var results = await mediator.Send(new GetCarbonReportList.Query());
             return Ok(results);
         }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<CarbonReportDto>> GetDetails(Guid id)
+        {
+            var carbonReport = mediator.Send(new GetCarbonReportDetails.Query {Id = id});
+            if(carbonReport == null ) throw new Exception("carbon report not found");
+            return Ok(carbonReport);
+        }
     }
 }
