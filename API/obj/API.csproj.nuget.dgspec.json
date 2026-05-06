@@ -35,6 +35,12 @@
             "projectReferences": {
               "D:\\cSharp\\CarbonImpact2\\Application\\Application.csproj": {
                 "projectPath": "D:\\cSharp\\CarbonImpact2\\Application\\Application.csproj"
+              },
+              "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj": {
+                "projectPath": "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj"
+              },
+              "D:\\cSharp\\CarbonImpact2\\Persistence\\Persistence.csproj": {
+                "projectPath": "D:\\cSharp\\CarbonImpact2\\Persistence\\Persistence.csproj"
               }
             }
           }
@@ -528,9 +534,6 @@
             "projectReferences": {
               "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj": {
                 "projectPath": "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj"
-              },
-              "D:\\cSharp\\CarbonImpact2\\Persistence\\Persistence.csproj": {
-                "projectPath": "D:\\cSharp\\CarbonImpact2\\Persistence\\Persistence.csproj"
               }
             }
           }
@@ -558,6 +561,14 @@
             "MediatR": {
               "target": "Package",
               "version": "[14.1.0, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[10.0.7, )"
+            },
+            "Microsoft.EntityFrameworkCore.Abstractions": {
+              "target": "Package",
+              "version": "[10.0.7, )"
             }
           },
           "imports": [
@@ -1223,6 +1234,9 @@
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
+              "D:\\cSharp\\CarbonImpact2\\Application\\Application.csproj": {
+                "projectPath": "D:\\cSharp\\CarbonImpact2\\Application\\Application.csproj"
+              },
               "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj": {
                 "projectPath": "D:\\cSharp\\CarbonImpact2\\Domain\\Domain.csproj"
               }
@@ -1245,6 +1259,10 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[10.0.7, )"
+            },
             "Microsoft.EntityFrameworkCore.Design": {
               "target": "Package",
               "version": "[10.0.6, )"
@@ -1252,6 +1270,14 @@
             "Microsoft.EntityFrameworkCore.Sqlite": {
               "target": "Package",
               "version": "[10.0.6, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2026.2.4, )"
+            },
+            "SkiaSharp": {
+              "target": "Package",
+              "version": "[3.119.2, )"
             }
           },
           "imports": [

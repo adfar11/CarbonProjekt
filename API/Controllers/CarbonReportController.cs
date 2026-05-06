@@ -1,4 +1,5 @@
 
+using System.Diagnostics.Metrics;
 using Application.CarbonReports.Commands;
 using Application.CarbonReports.Queries;
 using Domain.Entities;
@@ -36,17 +37,28 @@ namespace API.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(Guid id)
         {
-            await mediator.Send(new DeleteCarbonReport.Command{Id = id});
+            await mediator.Send(new DeleteCarbonReport.Command {Id = id});
             return NoContent();
         }
 
         [HttpPut("{id}")]
         public async Task<ActionResult> Edit(Guid id, [FromBody] EditCarbonReport.Command command)
         {
-            command.CarbonReport.Id = id;
+            command.Id = id;
             await mediator.Send(command);
             return Ok();
         }
+        [HttpGet("{id}/pdf")]
+        public async Task<IActionResult> DownloadPdf(Guid id)
+        {
+            byte[] result = await mediator.Send(new GetCarbonReportPdfQuery(id));
+            
+            if (result == null) return NotFound();
+
+            // HIER wird das Byte-Array übergeben (z.B. aus der Eigenschaft "Content")
+            return File(result, "application/pdf", $"Bericht_{id}.pdf");
+        }
+
 
     }
 }

@@ -17,8 +17,8 @@ public class CarbonReport
 
         // Berechnete Ergebnisse (in kg CO2e)
         // Diese werden in der Application-Schicht befüllt
-        public double Co2Scope1 { get; set; }
-        public double Co2Scope2 { get; set; }
+        public double Co2Scope1 { get; private set; }
+        public double Co2Scope2 { get; private set; }
         
         // Logik innerhalb der Domain: Berechneter Gesamt-Fußabdruck
         public double TotalCo2 => Co2Scope1 + Co2Scope2;
@@ -29,4 +29,17 @@ public class CarbonReport
                 // Zusätzliches Feld für die Dokumentation:
         // Wer hat den Bericht erstellt?
         public string? CreatedBy { get; set; }
+
+
+         // Die zentrale Methode für deine Berechnungen
+        public void CalculateEmissions()
+        {
+        // Faktoren (können später auch übergeben werden)
+            const double dieselFactor = 2.67;
+            const double gasFactor = 0.202;
+            const double electricityFactor = 0.420;
+
+            this.Co2Scope1 = (this.DieselLiters * dieselFactor) + (this.NaturalGasKWh * gasFactor);
+            this.Co2Scope2 = this.ElectricityKWh * electricityFactor;
+        }
 }

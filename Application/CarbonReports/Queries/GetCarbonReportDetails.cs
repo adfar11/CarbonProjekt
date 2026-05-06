@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Application.CarbonReports.Interfaces;
 using AutoMapper;
 using Domain.Entities;
 using MediatR;
-using Persistence;
+
 
 namespace Application.CarbonReports.Queries
 {
@@ -16,7 +17,7 @@ namespace Application.CarbonReports.Queries
             public required Guid Id {get; set;}
         }
 
-        public class Handler(AppDbContext context, IMapper mapper) : IRequestHandler<Query, CarbonReportDto>
+        public class Handler(IApplicationDbContext context, IMapper mapper) : IRequestHandler<Query, CarbonReportDto>
         {
             /*       public async Task<CarbonReport> Handle(Query request, CancellationToken cancellationToken)
                   {

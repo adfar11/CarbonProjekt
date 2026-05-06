@@ -1,9 +1,10 @@
 using System;
+using Application.CarbonReports.Interfaces;
 using AutoMapper;
 using Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Persistence;
+
 
 namespace Application.CarbonReports.Queries
 {
@@ -12,7 +13,7 @@ namespace Application.CarbonReports.Queries
         //public class Query : IRequest<List<CarbonReport>>{};
         public class Query : IRequest<List<CarbonReportDto>>{};
 
-        public class Handler(AppDbContext context, IMapper mapper) : IRequestHandler<Query, List<CarbonReportDto>>
+        public class Handler(IApplicationDbContext context, IMapper mapper) : IRequestHandler<Query, List<CarbonReportDto>>
         {
             /*      public async Task<List<CarbonReport>> Handle(Query request, CancellationToken cancellationToken)
                  {

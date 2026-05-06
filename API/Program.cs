@@ -1,4 +1,6 @@
+using Application.CarbonReports.Interfaces;
 using Application.Core;
+using Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 
@@ -12,9 +14,13 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<IApplicationDbContext>(provider => 
+    provider.GetRequiredService<AppDbContext>());
+
 builder.Services.AddMediatR(cfg => 
     cfg.RegisterServicesFromAssembly(typeof(Application.CarbonReports.Commands.CreateCarbonReport).Assembly)
 );
+builder.Services.AddScoped<IPdfService, PdfService>();
 
 
 builder.Services.AddAutoMapper(map => {}, typeof(MappingProfiles));

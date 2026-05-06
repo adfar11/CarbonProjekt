@@ -1,7 +1,8 @@
-using System;
-using Persistence;
+
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading;
+using Application.CarbonReports.Interfaces;
 
 namespace Application.CarbonReports.Commands
 {
@@ -9,7 +10,7 @@ namespace Application.CarbonReports.Commands
     {
         public class Command : IRequest {public Guid Id {get; set;}}
       
-        public class Handler(AppDbContext  context) : IRequestHandler<Command>
+        public class Handler(IApplicationDbContext  context) : IRequestHandler<Command>
         {
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
