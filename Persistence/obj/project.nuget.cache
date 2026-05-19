@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "xOtfiBtcT9k=",
+  "dgSpecHash": "SnBB4+bSBoY=",
   "success": true,
   "projectFilePath": "D:\\cSharp\\CarbonImpact2\\Persistence\\Persistence.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\asare\\.nuget\\packages\\automapper\\16.1.1\\automapper.16.1.1.nupkg.sha512",
+    "C:\\Users\\asare\\.nuget\\packages\\fluentassertions\\8.9.0\\fluentassertions.8.9.0.nupkg.sha512",
     "C:\\Users\\asare\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\asare\\.nuget\\packages\\mediatr\\14.1.0\\mediatr.14.1.0.nupkg.sha512",
     "C:\\Users\\asare\\.nuget\\packages\\mediatr.contracts\\2.0.1\\mediatr.contracts.2.0.1.nupkg.sha512",

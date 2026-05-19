@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Application.CarbonReports.Interfaces;
 using Domain.Entities;
 using QuestPDF.Fluent;
@@ -5,169 +7,282 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using SkiaSharp;
 
-namespace Persistence.Services;
-
-public class PdfService : IPdfService
+namespace Persistence.Services
 {
-    private const double DieselFactor = 2.67;
-    private const double GasFactor = 0.202;
-    private const double ElectricityFactor = 0.420;
-
-    public byte[] GenerateCarbonReportPdf(CarbonReport carbonReport)
+    public class PdfService : IPdfService
     {
-        QuestPDF.Settings.License = LicenseType.Community;
+        private const double DieselFactor = 2.67;
+        private const double GasFactor = 0.202;
+        private const double ElectricityFactor = 0.420;
 
-        byte[] logoBytes = GenerateInitialLogo(carbonReport.CompanyName);
-        byte[] chartBytes = GenerateScopeChart(carbonReport.Co2Scope1, carbonReport.Co2Scope2);
+        private const string ColorElectricity = "#6366F1"; // Indigo
+        private const string ColorGas = "#10B981";         // Emerald
+        private const string ColorDiesel = "#F59E0B";      // Amber
 
-        return Document.Create(container =>
+        public byte[] GenerateCarbonReportPdf(CarbonReport carbonReport)
         {
-            container.Page(page =>
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            string company = string.IsNullOrWhiteSpace(carbonReport.CompanyName) 
+                ? "Unbekanntes Unternehmen" 
+                : carbonReport.CompanyName;
+
+            double diesel = carbonReport.DieselLiters;
+            double gas = carbonReport.NaturalGasKWh;
+            double electricity = carbonReport.ElectricityKWh;
+
+            double dieselCo2 = (diesel * DieselFactor) / 1000;
+            double gasCo2 = (gas * GasFactor) / 1000;
+            double electricityCo2 = (electricity * ElectricityFactor) / 1000;
+
+            double scope1 = dieselCo2 + gasCo2;
+            double scope2 = electricityCo2;
+            double totalTonnes = scope1 + scope2;
+
+            byte[] chartBytes = GenerateScopeChart(dieselCo2, gasCo2, electricityCo2);
+            byte[] sealBytes = GenerateGreenSeal();
+
+            var document = Document.Create(container =>
             {
-                page.Margin(50);
-                page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(11).FontFamily(Fonts.Verdana));
-
-                // --- HEADER: Name links, Logo rechts ---
-                page.Header().Row(row =>
+                container.Page(page =>
                 {
-                    row.ConstantItem(50).Height(50).Image(logoBytes);
-                    row.RelativeItem().Column(col =>
+                    page.Margin(50);
+                    page.Size(PageSizes.A4);
+                    page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Verdana").FontColor(Colors.Grey.Darken3));
+
+                    // --- HEADER ---
+                    page.Header().Row(row =>
                     {
-                        col.Item().Text(carbonReport.CompanyName).FontSize(25).SemiBold().FontColor(Colors.Blue.Medium);
-                        col.Item().Text($"CO2-Emissionsbericht | ID: {carbonReport.Id}").FontSize(9).FontColor(Colors.Grey.Medium);
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().Text(company).FontSize(24).Bold().FontColor(Colors.Indigo.Darken3);
+                            col.Item().Text($"CO₂-Emissionsbericht | ID: {carbonReport.Id}").FontSize(9).FontColor(Colors.Grey.Medium);
+                            col.Item().PaddingTop(4).Text($"Zeitraum: {carbonReport.StartDate:dd.MM.yyyy} - {carbonReport.EndDate:dd.MM.yyyy}").FontSize(9).Italic();
+                        });
                     });
 
-                    
+                    // --- CONTENT ---
+                    page.Content().PaddingVertical(25).Column(col =>
+                    {
+                        col.Item().PaddingBottom(12).Text("Berechnungsübersicht").FontSize(14).Bold().FontColor(Colors.Indigo.Darken2);
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn(3); 
+                                columns.RelativeColumn(2); 
+                                columns.RelativeColumn(1.5f); 
+                                columns.RelativeColumn(2); 
+                            });
+
+                            table.Header(header =>
+                            {
+                                var headerStyle = TextStyle.Default.Bold().FontColor(Colors.White);
+                                table.Cell().Background(Colors.Indigo.Medium).Padding(6).Text("Kategorie").Style(headerStyle);
+                                table.Cell().Background(Colors.Indigo.Medium).Padding(6).AlignRight().Text("Menge").Style(headerStyle);
+                                table.Cell().Background(Colors.Indigo.Medium).Padding(6).AlignRight().Text("Faktor").Style(headerStyle);
+                                table.Cell().Background(Colors.Indigo.Medium).Padding(6).AlignRight().Text("Emissionen").Style(headerStyle);
+                            });
+
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).Text("⚡ Strom (Scope 2)");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{electricity:N0} kWh");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{ElectricityFactor:N3}");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{electricityCo2:N3} t").Bold().FontColor(ColorElectricity);
+
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).Text("🔥 Erdgas (Scope 1)");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{gas:N0} kWh");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{GasFactor:N3}");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{gasCo2:N3} t").Bold().FontColor(ColorGas);
+
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).Text("🚜 Diesel (Scope 1)");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{diesel:N0} L");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{DieselFactor:N3}");
+                            table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(6).AlignRight().Text($"{dieselCo2:N3} t").Bold().FontColor(ColorDiesel);
+
+                            table.Cell().ColumnSpan(3).PaddingTop(10).Text("Summe Scope 1 (Direkt)").Medium();
+                            table.Cell().PaddingTop(10).AlignRight().Text($"{scope1:N3} t").Bold();
+
+                            table.Cell().ColumnSpan(3).Text("Summe Scope 2 (Indirekt)").Medium();
+                            table.Cell().AlignRight().Text($"{scope2:N3} t").Bold();
+
+                            // KORREKTUR: .XmlAttribute() entfernt
+                            table.Cell().ColumnSpan(3).PaddingTop(8).Background(Colors.Indigo.Lighten5).Padding(6).Text("Gesamtfußabdruck").Bold().FontColor(Colors.Indigo.Darken3);
+                            table.Cell().PaddingTop(8).Background(Colors.Indigo.Lighten5).Padding(6).AlignRight().Text($"{totalTonnes:N3} t CO₂e").Bold().FontColor(Colors.Indigo.Darken3);
+                        });
+
+                        // KORREKTUR: .CornerRadius(8) anstelle von .RoundedCorners(10) verwenden
+                        col.Item().PaddingTop(35).Background(Colors.Grey.Lighten4).Padding(15).CornerRadius(8).Row(row =>
+                        {
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().Text("Emissionsanteile").FontSize(13).Bold().FontColor(Colors.Grey.Darken3);
+                                
+                                c.Item().PaddingTop(12).Row(r => {
+                                    r.ConstantItem(10).Height(10).Background(ColorElectricity);
+                                    r.RelativeItem().PaddingLeft(6).Text($"Strom Scope 2: {electricityCo2:N2} t ({ (totalTonnes > 0 ? (electricityCo2/totalTonnes*100) : 0):N0}%)").FontSize(10);
+                                });
+                                
+                                c.Item().PaddingTop(6).Row(r => {
+                                    r.ConstantItem(10).Height(10).Background(ColorGas);
+                                    r.RelativeItem().PaddingLeft(6).Text($"Erdgas Scope 1: {gasCo2:N2} t ({ (totalTonnes > 0 ? (gasCo2/totalTonnes*100) : 0):N0}%)").FontSize(10);
+                                });
+
+                                c.Item().PaddingTop(6).Row(r => {
+                                    r.ConstantItem(10).Height(10).Background(ColorDiesel);
+                                    r.RelativeItem().PaddingLeft(6).Text($"Diesel Scope 1: {dieselCo2:N2} t ({ (totalTonnes > 0 ? (dieselCo2/totalTonnes*100) : 0):N0}%)").FontSize(10);
+                                });
+                            });
+
+                            if (chartBytes != null && chartBytes.Length > 0)
+                            {
+                                row.ConstantItem(110).Height(110).Image(chartBytes);
+                            }
+                        });
+                    });
+
+                    // --- FOOTER ---
+                    page.Footer().PaddingTop(10).Column(col =>
+                    {
+                        col.Item().LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten2);
+                        col.Item().PaddingTop(4).Row(row =>
+                        {
+                            row.RelativeItem().Text("Dieser Bericht wurde maschinell erstellt und ist ohne Unterschrift gültig.").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
+                            row.RelativeItem().AlignRight().Text(x =>
+                            {
+                                x.Span("Seite ").FontSize(8).FontColor(Colors.Grey.Medium);
+                                x.CurrentPageNumber().FontSize(8).FontColor(Colors.Grey.Medium);
+                                x.Span(" von ").FontSize(8).FontColor(Colors.Grey.Medium);
+                                x.TotalPages().FontSize(8).FontColor(Colors.Grey.Medium);
+                            });
+                        });
+                    });
                 });
 
-                // --- CONTENT ---
-                page.Content().PaddingVertical(20).Column(col =>
+                // SEITE 2: Zertifikat (< 10.0 Tonnen CO2)
+                if (totalTonnes > 0 && totalTonnes < 10.0)
                 {
-                    // 1. Tabelle
-                    col.Item().PaddingBottom(10).Text("Berechnungsübersicht").FontSize(14).SemiBold();
-
-                    col.Item().Table(table =>
+                    container.Page(certPage =>
                     {
-                        table.ColumnsDefinition(columns =>
+                        certPage.Margin(50);
+                        certPage.Size(PageSizes.A4);
+                        certPage.PageColor(Colors.Grey.Lighten5);
+
+                        certPage.Content().Column(col =>
                         {
-                            columns.RelativeColumn(3); 
-                            columns.RelativeColumn(2); 
-                            columns.RelativeColumn(1); 
-                            columns.RelativeColumn(2); 
-                        });
-
-                        table.Header(header =>
-                        {
-                            var headerStyle = TextStyle.Default.SemiBold();
-                            header.Cell().BorderBottom(1).Padding(5).Text("Kategorie").Style(headerStyle);
-                            header.Cell().BorderBottom(1).Padding(5).AlignRight().Text("Menge").Style(headerStyle);
-                            header.Cell().BorderBottom(1).Padding(5).AlignRight().Text("Faktor").Style(headerStyle);
-                            header.Cell().BorderBottom(1).Padding(5).AlignRight().Text("Emissionen").Style(headerStyle);
-                        });
-
-                        AddTableRow(table, "Diesel (Scope 1)", $"{carbonReport.DieselLiters:N0} L", DieselFactor, carbonReport.DieselLiters * DieselFactor / 1000);
-                        AddTableRow(table, "Erdgas (Scope 1)", $"{carbonReport.NaturalGasKWh:N0} kWh", GasFactor, carbonReport.NaturalGasKWh * GasFactor / 1000);
-                        AddTableRow(table, "Strom (Scope 2)", $"{carbonReport.ElectricityKWh:N0} kWh", ElectricityFactor, carbonReport.ElectricityKWh * ElectricityFactor / 1000);
-
-                        table.Cell().ColumnSpan(3).PaddingTop(10).Text("Summe Scope 1").SemiBold();
-                        table.Cell().PaddingTop(10).AlignRight().Text($"{(carbonReport.Co2Scope1 / 1000):N3} t").SemiBold();
-
-                        table.Cell().ColumnSpan(3).Text("Summe Scope 2");
-                        table.Cell().AlignRight().Text($"{(carbonReport.Co2Scope2 / 1000):N3} t");
-
-                        table.Cell().ColumnSpan(3).PaddingTop(5).Background(Colors.Blue.Lighten5).Padding(5).Text("Gesamtemissionen").SemiBold().FontColor(Colors.Blue.Medium);
-                        table.Cell().PaddingTop(5).Background(Colors.Blue.Lighten5).Padding(5).AlignRight().Text($"{((carbonReport.Co2Scope1 + carbonReport.Co2Scope2) / 1000):N3} tCO2e").SemiBold().FontColor(Colors.Blue.Medium);
-                    });
-
-                    // --- DIAGRAMM SEKTION: Legende links, Chart rechts ---
-                    col.Item().PaddingTop(40).Row(row =>
-                    {
-                        row.RelativeItem().PaddingRight(20).Column(c =>
-                        {
-                            c.Item().Text("Verteilung nach Scopes").FontSize(13).SemiBold();
+                            col.Item().PaddingTop(80).AlignCenter().Text("ZERTIFIKAT").FontSize(38).Bold().FontColor(Colors.Green.Medium);
+                            col.Item().AlignCenter().Text("für herausragende CO₂-Effizienz").FontSize(16).FontColor(Colors.Grey.Darken1);
                             
-                            c.Item().PaddingTop(10).Row(r => {
-                                r.ConstantItem(12).Height(12).Background("#2196F3");
-                                r.RelativeItem().PaddingLeft(5).Text("Scope 1 (Direkt)").FontSize(10).SemiBold();
+                            if (sealBytes != null && sealBytes.Length > 0)
+                            {
+                                col.Item().PaddingTop(45).AlignCenter().Width(140).Height(140).Image(sealBytes);
+                            }
+
+                            col.Item().PaddingTop(45).AlignCenter().Text(company).FontSize(22).Bold().FontColor(Colors.Grey.Darken4);
+                            col.Item().AlignCenter().PaddingTop(15).PaddingHorizontal(30).Text(x =>
+                            {
+                                x.DefaultTextStyle(t => t.LineHeight(1.5f).FontSize(12).FontColor(Colors.Grey.Darken2));
+                                x.Span("Dieses Unternehmen hat im aktuellen Berichtszeitraum Gesamtemissionen von nur ");
+                                x.Span($"{totalTonnes:N2} t CO₂e").Bold().FontColor(Colors.Green.Darken2);
+                                x.Span(" verursacht und erfüllt damit alle Kriterien für das offizielle Low-Carbon-Siegel.");
                             });
-                            c.Item().PaddingLeft(17).Text($"{(carbonReport.Co2Scope1/1000):N2} tCO2e").FontSize(10).FontColor(Colors.Grey.Darken2);
-
-                            c.Item().PaddingTop(10).Row(r => {
-                                r.ConstantItem(12).Height(12).Background("#BBDEFB");
-                                r.RelativeItem().PaddingLeft(5).Text("Scope 2 (Indirekt)").FontSize(10).SemiBold();
-                            });
-                            c.Item().PaddingLeft(17).Text($"{(carbonReport.Co2Scope2/1000):N2} tCO2e").FontSize(10).FontColor(Colors.Grey.Darken2);
-                        });
-
-                        row.ConstantItem(140).Height(140).Image(chartBytes);
-                    });
-                });
-
-                // --- FOOTER ---
-                page.Footer().PaddingTop(10).Column(col =>
-                {
-                    col.Item().LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten2);
-                    col.Item().PaddingTop(5).Text("Dieser Bericht wurde maschinell erstellt und ist ohne Unterschrift gültig.").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
-
-                    col.Item().Row(row =>
-                    {
-                        //row.RelativeItem().Text($"Erstellungsdatum: {DateTime.Now:dd.MM.yyyy}").FontSize(8).FontColor(Colors.Grey.Medium);
-                        row.RelativeItem().AlignRight().Text(x =>
-                        {
-                            x.Span("Seite ").FontSize(8).FontColor(Colors.Grey.Medium);
-                            x.CurrentPageNumber().FontSize(8).FontColor(Colors.Grey.Medium);
-                            x.Span(" von ").FontSize(8).FontColor(Colors.Grey.Medium);
-                            x.TotalPages().FontSize(8).FontColor(Colors.Grey.Medium);
                         });
                     });
-                });
+                }
             });
-        }).GeneratePdf();
-    }
 
-    private void AddTableRow(TableDescriptor table, string label, string amount, double factor, double result)
-    {
-        table.Cell().Padding(5).Text(label);
-        table.Cell().Padding(5).AlignRight().Text(amount);
-        table.Cell().Padding(5).AlignRight().Text($"{factor:N3}");
-        table.Cell().Padding(5).AlignRight().Text($"{result:N3} t");
-    }
+            return document.GeneratePdf();
+        }
 
-    private byte[] GenerateInitialLogo(string name)
-    {
-        string initials = string.IsNullOrWhiteSpace(name) ? "?" : name[..1].ToUpper();
-        int hash = name?.GetHashCode() ?? 0;
-        var color = SKColor.FromHsl(Math.Abs(hash % 360), 60, 50);
+        private byte[] GenerateScopeChart(double e, double g, double d)
+        {
+            if (e == 0 && g == 0 && d == 0) return Array.Empty<byte>();
 
-        using var surface = SKSurface.Create(new SKImageInfo(100, 100));
-        var canvas = surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-        using var paint = new SKPaint { Color = color, IsAntialias = true };
-        canvas.DrawCircle(50, 50, 48, paint);
-        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
-        using var font = new SKFont { Size = 50, Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) };
-        canvas.DrawText(initials, 50, 68, SKTextAlign.Center, font, textPaint);
-        using var image = surface.Snapshot();
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return data.ToArray();
-    }
+            int size = 200;
+            using var bitmap = new SKBitmap(size, size);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.Transparent);
 
-    private byte[] GenerateScopeChart(double s1, double s2)
-    {
-        using var surface = SKSurface.Create(new SKImageInfo(400, 400));
-        var canvas = surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-        double total = s1 + s2;
-        if (total <= 0) return Array.Empty<byte>();
-        float s1Angle = (float)(s1 / total * 360);
-        var rect = new SKRect(20, 20, 380, 380);
-        using var p1 = new SKPaint { Color = SKColor.Parse("#2196F3"), IsAntialias = true };
-        canvas.DrawArc(rect, -90, s1Angle, true, p1);
-        using var p2 = new SKPaint { Color = SKColor.Parse("#BBDEFB"), IsAntialias = true };
-        canvas.DrawArc(rect, s1Angle - 90, 360 - s1Angle, true, p2);
-        using var image = surface.Snapshot();
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        return data.ToArray();
+            float total = (float)(e + g + d);
+            float angleE = (float)(e / total * 360);
+            float angleG = (float)(g / total * 360);
+            float angleD = (float)(d / total * 360);
+
+            var rect = new SKRect(8, 8, size - 8, size - 8);
+            float startAngle = -90f;
+
+            if (angleE > 0)
+            {
+                using var p = new SKPaint { Color = SKColor.Parse(ColorElectricity), IsAntialias = true, Style = SKPaintStyle.Fill };
+                canvas.DrawArc(rect, startAngle, angleE, true, p);
+                startAngle += angleE;
+            }
+            if (angleG > 0)
+            {
+                using var p = new SKPaint { Color = SKColor.Parse(ColorGas), IsAntialias = true, Style = SKPaintStyle.Fill };
+                canvas.DrawArc(rect, startAngle, angleG, true, p);
+                startAngle += angleG;
+            }
+            if (angleD > 0)
+            {
+                using var p = new SKPaint { Color = SKColor.Parse(ColorDiesel), IsAntialias = true, Style = SKPaintStyle.Fill };
+                canvas.DrawArc(rect, startAngle, angleD, true, p);
+            }
+
+            using var holePaint = new SKPaint { BlendMode = SKBlendMode.Clear, IsAntialias = true };
+            canvas.DrawCircle(size / 2f, size / 2f, size * 0.22f, holePaint);
+
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            return data.ToArray();
+        }
+
+        
+private byte[] GenerateGreenSeal()
+{
+    int size = 200;
+    using var bitmap = new SKBitmap(size, size);
+    using var canvas = new SKCanvas(bitmap);
+    canvas.Clear(SKColors.Transparent);
+
+    using var paint = new SKPaint { Color = SKColor.Parse("#10B981"), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 5 };
+    canvas.DrawCircle(size / 2f, size / 2f, (size / 2f) - 8, paint);
+    
+    paint.StrokeWidth = 1.5f;
+    canvas.DrawCircle(size / 2f, size / 2f, (size / 2f) - 15, paint);
+
+    using var checkPaint = new SKPaint { Color = SKColor.Parse("#10B981"), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 8, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
+    using var path = new SKPath();
+    path.MoveTo(size * 0.32f, size * 0.5f);
+    path.LineTo(size * 0.46f, size * 0.64f);
+    path.LineTo(size * 0.72f, size * 0.36f);
+    canvas.DrawPath(path, checkPaint);
+
+    // KORREKTUR: Verwendung der klassischen, stabilen SKPaint-Textparameter
+    using var textPaint = new SKPaint 
+    { 
+        Color = SKColor.Parse("#10B981"), 
+        IsAntialias = true,
+        Typeface = SKTypeface.FromFamilyName("Verdana", SKFontStyle.Bold),
+        TextSize = 14f // Nutzen Sie die direkte TextSize-Eigenschaft
+    };
+    
+    string text = "LOW CO₂";
+    
+    // Berechnet die Textbreite direkt über die Paint-Eigenschaft
+    float textWidth = textPaint.MeasureText(text);
+    float x = (size / 2f) - (textWidth / 2f);
+    float y = size - 30;
+
+    // Garantiert kompatible Signatur: string, float, float, SKPaint
+    canvas.DrawText(text, x, y, textPaint);
+
+    using var image = SKImage.FromBitmap(bitmap);
+    using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+    return data.ToArray();
+}
+
+
+
     }
 }

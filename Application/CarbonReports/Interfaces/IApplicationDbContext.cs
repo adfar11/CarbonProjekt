@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore; // Für DbSet
-using System.Threading;              // Für CancellationToken
-using System.Threading.Tasks; 
 using Domain.Entities;
 
 namespace Application.CarbonReports.Interfaces

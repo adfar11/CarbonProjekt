@@ -10,6 +10,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    
     public class CarbonReportController(IMediator mediator) : ControllerBase
     {
         [HttpPost]
@@ -40,6 +41,7 @@ namespace API.Controllers
             await mediator.Send(new DeleteCarbonReport.Command {Id = id});
             return NoContent();
         }
+
 
         [HttpPut("{id}")]
         public async Task<ActionResult> Edit(Guid id, [FromBody] EditCarbonReport.Command command)

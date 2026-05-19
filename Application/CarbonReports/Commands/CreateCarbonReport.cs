@@ -27,13 +27,7 @@ namespace Application.CarbonReports.Commands;
 
     public class Handler(IApplicationDbContext context, IMapper mapper) : IRequestHandler<Command, CarbonReportDto>
     {
-        /*    async Task<CarbonReportDto> IRequestHandler<Command, CarbonReportDto>.Handle(Command request, CancellationToken cancellationToken)
-           {
-               context.CarbonReports.Add(request.CarbonReport);
-               await context.SaveChangesAsync(cancellationToken);
-
-               return mapper.Map<CarbonReportDto>(request.CarbonReport);
-           } */
+   
         public async Task<CarbonReportDto> Handle(Command request, CancellationToken cancellationToken)
         {
            var carbonReport = new CarbonReport
